@@ -40,6 +40,7 @@ class TripsController extends Controller
     }
 
     public function bookTicket(Request $request) {
+
         $request->validate([
             'customer_number' => 'required|integer|max:255',
             'seat_number' => 'required|integer|max:100',
@@ -48,14 +49,7 @@ class TripsController extends Controller
             'route_line_id' => 'required|integer'
         ]);
 
-        //check if reserved seat is free
-        $ticketCheck = Tickets::where(function($q) use ($request) {
-            $q->where('route_line_id', $request->route_line_id)
-                ->where('trip_id', $request->trip_id)
-                ->where('seat_number', $request->seat_number);
-        })
-            ->first();
-        if($ticketCheck) {
+        if(!$this->checkSeatAvailability($request)) {
             return response(['message' => "seat already reserved!", 'status' => 'error'], 401);
         }
 
@@ -110,8 +104,19 @@ class TripsController extends Controller
         if($ticketCheck) $available = false;
         else {
             $routeLines = TripsRouteLines::where('trip_id', $request->trip_id)
-                ->with('trip')
+                ->with('trip.startStation')
+                ->with('trip.endStation')
                 ->get();
+
+            foreach($routeLines as $line) {
+                if($line->id == $request->route_line_id &&
+                $line->from_station_id == $line->trip->start_station->id &&
+                $line->to_station_id == $line->trip->end_station->id){
+                    return $available;
+                } else {
+                    //we create linked list to intersect between stations and check the routelins for the trip
+                }
+            }
         }
 
         return $available;
