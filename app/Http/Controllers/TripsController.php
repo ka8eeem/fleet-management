@@ -97,4 +97,24 @@ class TripsController extends Controller
         return $routeLineObj;
     }
 
+    protected function checkSeatAvailability($request) {
+        $available = true;
+
+        $ticketCheck = Tickets::where(function($q) use ($request) {
+            $q->where('route_line_id', $request->route_line_id)
+                ->where('trip_id', $request->trip_id)
+                ->where('seat_number', $request->seat_number);
+        })
+            ->first();
+
+        if($ticketCheck) $available = false;
+        else {
+            $routeLines = TripsRouteLines::where('trip_id', $request->trip_id)
+                ->with('trip')
+                ->get();
+        }
+
+        return $available;
+    }
+
 }
